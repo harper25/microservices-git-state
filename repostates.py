@@ -30,13 +30,18 @@ def main() -> None:
         pipeline.extend(
             [GitCheckout(target_branch=flow_args["checkout"]), GitStatusBranch()]
         )
+    elif flow_args["branches"]:
+        pipeline.append(GitGoneBranches())
 
     for git_command in pipeline:
         print(git_command.message)
         git_command_executor.run_processes(repos, git_command)
         print(git_command.message, "\t✓")
 
-    present_table_summary(repos)
+    if flow_args["branches"]:
+        present_gone_branches(repos)
+    else:
+        present_table_summary(repos)
 
 
 def move_coursor_up(count: int) -> None:
@@ -48,6 +53,18 @@ def present_git_pipeline_flow(pipeline: List["GitCommand"]) -> None:
     for git_command in pipeline:
         print(git_command.message)
     print()
+
+
+def present_gone_branches(repos: List["GitRepo"]) -> None:
+    print(f"\n{Style.BLUE}ALREADY GONE BRANCHES:{Style.RESET}\n")
+    for repo in repos:
+        print(
+            f"{Style.GREEN}{repo.name}{Style.RESET}"
+        )
+        for branch_candidate_to_delete in repo.gone_branches:
+            print(
+                f"\t{Style.RED}{branch_candidate_to_delete}{Style.RESET}"
+            )
 
 
 def present_table_summary(repos: List["GitRepo"]) -> None:
@@ -96,6 +113,7 @@ def get_cli_arguments() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--pull", action="store_true", default=False)
     group.add_argument("--checkout", default=None)
+    group.add_argument("--branches", action="store_true", default=False)
     args = parser.parse_args()
     common_args = {
         "dir": os.path.abspath(args.dir),
@@ -348,7 +366,7 @@ class GitGoneBranches(GitCommand):
 
     @staticmethod
     def is_relevant(repo: "GitRepo") -> bool:
-        return True
+        return True # ?
 
     @staticmethod
     def handle_output(repo: "GitRepo", returncode: int, output: str, error: str) -> None:
